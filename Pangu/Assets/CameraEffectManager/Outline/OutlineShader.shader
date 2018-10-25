@@ -9,6 +9,82 @@ Shader "Custom/Effect/Outline"
 	}
 	SubShader
 	{
+		//blur Downsample pass
+		Pass{
+				ZWrite off Fog{ mode off } Cull off ZTest Always Blend Off
+				CGPROGRAM
+				#pragma vertex vert
+				#pragma fragment frag
+				#include "UnityCG.cginc"
+
+				sampler2D _MainTex;
+				uniform float4 _MainTex_TexelSize;
+				float4 offsets;
+				struct v2f {
+					float4 pos : POSITION;
+					float2 uv : TEXCOORD0;
+				};
+
+				v2f vert(appdata_img v) {
+					v2f o;
+					o.pos = UnityObjectToClipPos(v.vertex);
+					o.uv.xy = v.texcoord.xy;
+					return o;
+				}
+
+				half4 frag(v2f i) : COLOR{
+
+					float4 d = _MainTex_TexelSize.xyxy * float4(-1.0, -1.0, 1.0, 1.0);
+
+					half4 color = float4 (0,0,0,0);
+					color +=  tex2D(_MainTex,i.uv+d.xy);
+					color +=  tex2D(_MainTex,i.uv+d.zy);
+					color +=  tex2D(_MainTex,i.uv+d.xw);
+					color +=  tex2D(_MainTex,i.uv+ d.zw);
+
+					return color * (1.0/4.0);
+				}
+
+				ENDCG
+			}
+		//blur Upsample pass
+		Pass{
+				ZWrite off Fog{ mode off } Cull off ZTest Always Blend Off
+				CGPROGRAM
+				#pragma vertex vert
+				#pragma fragment frag
+				#include "UnityCG.cginc"
+
+				sampler2D _MainTex;
+				uniform float4 _MainTex_TexelSize;
+				float4 offsets;
+				struct v2f {
+					float4 pos : POSITION;
+					float2 uv : TEXCOORD0;
+				};
+
+				v2f vert(appdata_img v) {
+					v2f o;
+					o.pos = UnityObjectToClipPos(v.vertex);
+					o.uv.xy = v.texcoord.xy;
+					return o;
+				}
+
+				half4 frag(v2f i) : COLOR{
+
+					float4 d = _MainTex_TexelSize.xyxy * float4(-1.0, -1.0, 1.0, 1.0) * 0.5;
+					
+					half4 color = float4 (0,0,0,0);
+					color +=  tex2D(_MainTex,i.uv+d.xy);
+					color +=  tex2D(_MainTex,i.uv+d.zy);
+					color +=  tex2D(_MainTex,i.uv+d.xw);
+					color +=  tex2D(_MainTex,i.uv+ d.zw);
+
+					return color * (1.0/4.0);
+				}
+
+				ENDCG
+			}
 		//Blur Pass
 		Pass{
 			ZWrite off Fog{ mode off } Cull off ZTest Always Blend Off
