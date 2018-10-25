@@ -12,11 +12,12 @@ public class CameraEffectManager : MonoBehaviour
     private Dictionary<GameObject, Renderer[]> renderDic = new Dictionary<GameObject, Renderer[]>();
     private Camera m_mainCam;
     private Material m_outlineMat;
+    private Material m_trueColorMat;
     #endregion
 
     #region Public Members
-    public float qualityOrighScene = 0.5f;
-    public float qualityBlur = 0.25f;
+    public float qualityOrighScene =1;// 0.5f;
+    public float qualityBlur = 1;//0.25f; 
     public Color outterLineColor = Color.red;
     public float outterLineSize = 1;
     #endregion
@@ -27,7 +28,8 @@ public class CameraEffectManager : MonoBehaviour
         m_mainCam.backgroundColor = new Color(0, 0, 0, 0);
         m_outlineMat = new Material(Shader.Find("Custom/Effect/Outline"));
         m_outlineMat.hideFlags = HideFlags.HideAndDontSave;
-
+        m_trueColorMat = new Material(Shader.Find("Custom/Effect/TrueColor"));
+        m_trueColorMat.hideFlags = HideFlags.HideAndDontSave;
     }
 
     protected void OnDestory()
@@ -110,18 +112,25 @@ public class CameraEffectManager : MonoBehaviour
         command.ClearRenderTarget(true, true, Color.clear);
         command.GetTemporaryRT(blur1, (int)(m_mainCam.pixelWidth * qualityBlur), (int)(m_mainCam.pixelHeight * qualityBlur), 0, FilterMode.Bilinear, RenderTextureFormat.ARGB32);
         command.GetTemporaryRT(blur2, (int)(m_mainCam.pixelWidth * qualityBlur), (int)(m_mainCam.pixelHeight * qualityBlur), 0, FilterMode.Bilinear, RenderTextureFormat.ARGB32);
-        command.SetGlobalColor("Outline_Color", outterLineColor);
+        command.SetGlobalColor("_Outline_Color",outterLineColor);
 
-        foreach (Renderer[] renders in renderDic.Values)
+        foreach (Renderer[] renders in renderDic.Values){
             for (int i = 0; i < renders.Length; ++i)
                 if (renders[i] != null && renders[i].isVisible)
-                    command.DrawRenderer(renders[i], m_outlineMat);
-
+                    command.DrawRenderer(renders[i], m_trueColorMat);
+        }
         //3. Blur
+        
         command.SetGlobalVector("offsets", new Vector4(outterLineSize / Screen.width, 0, 0, 0));
         command.Blit(sceneId, blur1, m_outlineMat, 1);
         command.SetGlobalVector("offsets", new Vector4(0, outterLineSize / Screen.height, 0, 0));
         command.Blit(blur1, blur2, m_outlineMat, 1);
+
+        command.SetGlobalVector("offsets", new Vector4(outterLineSize / Screen.width, 0, 0, 0));
+        command.Blit(blur2, blur1, m_outlineMat, 1);
+        command.SetGlobalVector("offsets", new Vector4(0, outterLineSize / Screen.height, 0, 0));
+        command.Blit(blur1, blur2, m_outlineMat, 1);
+
 
         //4. Cut off
         command.Blit(sceneId, blur2, m_outlineMat, 2);
